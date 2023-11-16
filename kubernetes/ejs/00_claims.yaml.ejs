@@ -1,0 +1,64 @@
+<% nodes.forEach(node => { %>
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: volume-<%= node.Node_UserIdent %>
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: <%= node.storage_size %>Gi
+status: {}
+---
+<% }); %>
+
+<% bootnodes.forEach(node => { %>
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: volume-<%= node.Node_UserIdent %>
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: <%= node.storage_size %>Gi
+status: {}
+---
+<% }); %>
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    name: volume-ethmonitor
+  name: volume-ethmonitor
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: <%= config.monitor.storage_size %>Gi
+status: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    name: volume-mongodb
+  name: volume-mongodb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: <%= config.explorer.storage_size %>Gi
+status: {}
+---

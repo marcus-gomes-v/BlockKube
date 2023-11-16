@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: explorer-config
+  namespace: default
+  labels:
+    name: explorer-config
+    app: kuberneteth
+data:
+  config.json: |-
+    {
+        "nodeAddr":     "<%= config.explorer.explorerNode %>-rpchost",
+        "gethPort":     <%= config.explorer.explorerHTTPPort %>,
+        "startBlock":   0,
+        "endBlock":     "latest",
+        "quiet":        true,
+        "syncAll":      true,
+        "patch":        true,
+        "patchBlocks":  100
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: explorer-svc
+  namespace: default
+  labels:
+    app: kuberneteth
+    tier: frontend
+    name: explorer-svc
+spec:
+  selector:
+    app: kuberneteth
+    tier: frontend
+    name: explorer
+<% if (config.explorer.k8s.nodePort) { %>
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+<% } %>
+  ports:
+    - name: <%= config.explorer.name %>-port
+      protocol: TCP
+      port: 3000
+<% if (config.explorer.k8s.nodePort) { %>
+      nodePort: <%= config.explorer.k8s.nodePort %>
+<% } %>
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: default
+  name: explorer
+spec:
+  selector:
+    matchLabels:
+      app: kuberneteth
+  replicas: 1
+  serviceName: explorer
+  template:
+    metadata:
+      name: explorer
+      labels:
+        app: kuberneteth
+        tier: frontend
+        name: explorer
+    spec:
+      containers:
+      - name: explorer
+        image: ijsfd/explorer:latest
+        imagePullPolicy: IfNotPresent
+        command: [ "sh" ]
+        args:
+        - "-cx"
+        - "cp -f /explorer-configmap/config.json /explorer/config.json;
+           sed -i \"s/<%= config.explorer.explorerNode %>-rpchost/$<%= config.explorer.explorerNode.toUpperCase().replace(/-/g, '_') %>_SVC_SERVICE_HOST/g\" /explorer/config.json;
+           npm start app.js;
+           exit 0;"
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MONGO_URI
+          value: 'mongodb://mongodb-svc/blockDB'
+        volumeMounts:
+        - name: explorer-configmap-volume
+          mountPath: /explorer-configmap/config.json
+          subPath: config.json
+      volumes:
+      - name: explorer-configmap-volume
+        configMap:
+          name: explorer-config
+          items:
+          - key: config.json
+            path: config.json
+---

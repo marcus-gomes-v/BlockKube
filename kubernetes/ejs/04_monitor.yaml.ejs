@@ -1,0 +1,135 @@
+<%
+function escapeNodeUserIdent(nodeUserIdent) {
+    return nodeUserIdent.toUpperCase().replace(/-/g, '_');
+}
+%>
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitor-config
+  namespace: default
+  labels:
+    app: kuberneteth
+    name: monitor-config
+data:
+  app.json: |-
+    [
+      <% nodes.forEach((node, index) => { %>
+      {
+        "name"              : "<%= node.Node_UserIdent %>",
+        "cwd"               : ".",
+        "script"            : "app.js",
+        "log_date_format"   : "YYYY-MM-DD HH:mm Z",
+        "merge_logs"        : false,
+        "watch"             : false,
+        "exec_interpreter"  : "node",
+        "exec_mode"         : "fork_mode",
+        "env":
+        {
+          "NODE_ENV"        : "production",
+          "RPC_HOST"        : "<%= node.Node_UserIdent %>-rpchost",
+          "RPC_PORT"        : "<%= node.Node_HTTPPort %>",
+          "LISTENING_PORT"  : "<%= node.NodeP2P_DiscoveryAddr %>",
+          "INSTANCE_NAME"   : "<%= node.Node_UserIdent %>",
+          "CONTACT_DETAILS" : "",
+          "WS_SERVER"       : "localhost:3001",
+          "WS_SECRET"       : "<%= config.monitor.ws_secret %>",
+          "VERBOSITY"       : <%= config.monitor.verbosity %>
+        }
+      }<%= index < nodes.length - 1 ? ',' : '' %>
+      <% }); %>
+    ]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: default
+  name: <%= config.monitor.name %>-svc
+  labels:
+    app: kuberneteth
+    tier: frontend
+    name: <%= config.monitor.name %>-svc
+spec:
+  selector:
+    app: kuberneteth
+    tier: frontend
+<% if (config.monitor.k8s.nodePort) { %>
+  type: LoadBalancer
+<% } %>
+  ports:
+    - name: <%= config.monitor.name %>-port
+      protocol: TCP
+      port: 3001
+<% if (config.monitor.k8s.nodePort) { %>
+      nodePort: <%= config.monitor.k8s.nodePort %>
+<% } %>
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: default
+  name: <%= config.monitor.name %>
+spec:
+  selector:
+    matchLabels:
+      app: kuberneteth
+  replicas: 1
+  serviceName: monitor
+  template:
+    metadata:
+      name: <%= config.monitor.name %>
+      labels:
+        app: kuberneteth
+        tier: frontend
+        name: <%= config.monitor.name %>
+    spec:
+      initContainers:
+      - name: <%= config.monitor.name %>-init-container
+        image: ijsfd/eth-netstats
+        imagePullPolicy: IfNotPresent
+        command: [ "sh" ]
+        args:
+        - "-cx"
+        - "cp -r /eth-net-intelligence-api/* /ethmonitor;
+           cp /monitor-configmap/app.json /ethmonitor/app.json;
+           <% nodes.forEach(node => { %>
+           sed -i \"s/<%= node.Node_UserIdent %>-rpchost/$<%= escapeNodeUserIdent(node.Node_UserIdent) %>_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           <% }); %>
+           exit 0;"
+        volumeMounts:
+        - name: monitor-configmap-volume
+          mountPath: /monitor-configmap/app.json
+          subPath: app.json
+        - name: monitor-config-persistent-storage
+          mountPath: /ethmonitor
+      containers:
+      - name: eth-netstats-container
+        image: ijsfd/eth-netstats
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 3001
+        env:
+        - name: WS_SECRET
+          value: "<%= config.monitor.ws_secret %>"
+        - name: PORT
+          value: "3001"
+      - name: eth-net-intelligence-api-container
+        image: ijsfd/eth-net-intelligence-api
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: monitor-config-persistent-storage
+          mountPath: /eth-net-intelligence-api/app.json
+          subPath: app.json
+      volumes:
+      - name: monitor-configmap-volume
+        configMap:
+          name: monitor-config
+          items:
+          - key: app.json
+            path: app.json
+      - name: monitor-config-persistent-storage
+        persistentVolumeClaim:
+          claimName: volume-ethmonitor
+---

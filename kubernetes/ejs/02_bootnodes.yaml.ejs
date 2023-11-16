@@ -1,0 +1,171 @@
+<% bootnodes.forEach(bootnode=> { %>---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keystore-config-<%= bootnode.geth.Node_UserIdent %>
+  namespace: default
+  labels:
+    app: bootnode
+    name: keystore-config-<%= bootnode.geth.Node_UserIdent %>
+data:
+  <%= bootnode.keystoreFilename %>: |-
+    <%- bootnode.keystoreFileContent.split('\n').join('\n    ') %>
+<% }); %>
+<% bootnodes.forEach(bootnode => { %>---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gethconfig-<%= bootnode.geth.Node_UserIdent %>
+  namespace: default
+  labels:
+    app: bootnode
+    name: gethconfig-<%= bootnode.geth.Node_UserIdent %>
+data:
+  gethconfig: |-
+    <%- bootnode.tomlFileContent.split('\n').join('\n    ') %>
+<% }); %>
+<% bootnodes.forEach(bootnode=> { %>---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: default
+  name: geth-bootnode-svc
+  labels:
+    app: bootnode
+    tier: backend
+    name: geth-bootnode-svc
+spec:
+  selector:
+    app: bootnode
+    tier: backend
+    name: bootnode
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: geth-bootnode-ipc-discovery
+      protocol: UDP
+      port: <%= bootnode.geth.NodeP2P_DiscoveryAddr %>
+      targetPort: <%= bootnode.geth.NodeP2P_DiscoveryAddr %>
+<% }); %>
+<% bootnodes.forEach(bootnode=> { %>---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: default
+  name: geth-boot-node-setup-pod
+  labels:
+    app: bootnode
+    name: bootnode-setup-pod
+spec:
+  selector:
+    matchLabels:
+      app: bootnode
+      name: bootnode-setup-pod
+  template:
+    metadata:
+      labels:
+        app: bootnode
+        name: bootnode-setup-pod
+    spec:
+      containers:
+      - name: geth-boot-node-setup-container
+        image: ijsfd/geth-node:alltools-v1.9.0
+        imagePullPolicy: IfNotPresent
+        command: [ "sh" ]
+        args:
+        - "-cx"
+        - "cd <%= bootnode.geth.Node_DataDir %>;
+           echo \"<%= bootnode.k8s.nodekeyhex %>\" > nodekeyhex;
+           cat nodekeyhex;
+           echo \"enode://$(/usr/local/bin/bootnode -nodekey nodekeyhex -writeaddress)@$GETH_BOOTNODE_SVC_SERVICE_HOST:<%= bootnode.geth.NodeP2P_DiscoveryAddr %>\" > enode.address;
+           set +x;
+           while true; do :; done;"
+        volumeMounts:
+        - name: geth-boot-node-persistent-storage
+          mountPath: <%= bootnode.geth.Node_DataDir %>
+      volumes:
+      - name: geth-boot-node-persistent-storage
+        hostPath:
+          path: /var/lib/docker/geth-storage/bootnode
+<% }); %>
+<% bootnodes.forEach(bootnode => { %>---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: default
+  name: geth-bootnode
+  labels:
+    app: bootnode
+    tier: backend
+    name: geth-bootnode
+spec:
+  selector:
+    matchLabels:
+      app: bootnode
+  replicas: <%= bootnode.k8s.replicas %>
+  serviceName: geth-<%= bootnode.geth.Node_UserIdent %>
+  template:
+    metadata:
+      name: geth-<%= bootnode.geth.Node_UserIdent %>
+      labels:
+        app: bootnode
+        tier: backend
+        name: <%= bootnode.geth.Node_UserIdent %>
+    spec:
+      containers:
+      - name: geth-bootnode-container
+        image: ijsfd/geth-node:alltools-v1.9.0
+        imagePullPolicy: IfNotPresent
+        command: [ "sh" ]
+        args:
+        - "-cx"
+        - "cd <%= bootnode.geth.Node_DataDir %>;
+          /usr/local/bin/geth --datadir <%= bootnode.geth.Node_DataDir %> init /etc/geth/genesis/genesis-geth.json;
+          touch <%= bootnode.geth.Node_DataDir %>/genesis_created;
+          echo <%= bootnode.geth.Eth_Password %> > <%= bootnode.geth.Node_DataDir %>/password.txt;
+          mkdir -p /etc/geth/<%= bootnode.geth.Node_UserIdent %>;
+          cp /etc/gethconfigmap/<%= bootnode.geth.Node_UserIdent %>/gethconfig.toml /etc/geth/<%= bootnode.geth.Node_UserIdent %>;
+          /usr/local/bin/geth \
+          --verbosity <%= config.geth.network.verbosity %>  \
+          --nodekey <%= bootnode.geth.Node_DataDir %>/nodekeyhex \
+          --config /etc/geth/<%= bootnode.geth.Node_UserIdent %>/gethconfig.toml;"
+        volumeMounts:
+        - name: <%= bootnode.geth.Node_UserIdent %>-persistent-storage
+          mountPath: <%= bootnode.geth.Node_DataDir %>/storage
+        - name: <%= bootnode.geth.Node_UserIdent %>-config-persistent-storage
+          mountPath: /etc/gethconfigmap/<%= bootnode.geth.Node_UserIdent %>
+        - name: keystore-config-persistent-storage
+          mountPath: <%= bootnode.geth.Node_DataDir %>/keystore/<%= config.keystore.items[bootnode.geth.Eth_Etherbase] %>
+          subPath: <%= config.keystore.items[bootnode.geth.Eth_Etherbase] %>
+        - name: geth-boot-node-persistent-storage
+          mountPath: <%= bootnode.geth.Node_DataDir %>
+        - name: genesis-config-persistent-storage
+          mountPath: /etc/geth/genesis/genesis-geth.json
+          subPath: genesis-geth.json
+      volumes:
+      - name: keystore-config-persistent-storage
+        configMap:
+          name: keystore-config-<%= bootnode.geth.Node_UserIdent %>
+          items:
+          - key: <%= config.keystore.items[bootnode.geth.Eth_Etherbase] %>
+            path: <%= config.keystore.items[bootnode.geth.Eth_Etherbase] %>
+      - name: geth-boot-node-persistent-storage
+        hostPath:
+          path: /var/lib/docker/geth-storage/bootnode
+      - name: genesis-config-persistent-storage
+        configMap:
+          name: genesis-config
+          items:
+          - key: genesis-geth.json
+            path: genesis-geth.json
+      - name: <%= bootnode.geth.Node_UserIdent %>-persistent-storage
+        persistentVolumeClaim:
+          claimName: volume-<%= bootnode.geth.Node_UserIdent %>
+      - name: <%= bootnode.geth.Node_UserIdent %>-config-persistent-storage
+        configMap:
+          name: gethconfig-<%= bootnode.geth.Node_UserIdent %>
+          items:
+          - key: gethconfig
+            path: gethconfig.toml
+---
+<% }); %>
