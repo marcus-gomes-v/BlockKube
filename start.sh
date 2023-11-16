@@ -59,7 +59,7 @@ while true; do
     echo -e "\n${ORANGE}Choose an option to proceed:"
     echo -e "${ORANGE}A${NC} - Auto: Run everything              ${ORANGE}R${NC} - Reset configurations to default"
     echo -e "${ORANGE}K${NC} - Apply Kubernetes configuration    ${ORANGE}C${NC} - Check configurations (environment.yaml)"
-    echo -e "${RED}E${NC} - Exit\n"
+    echo -e "${ORANGE}I${NC} - Install all packages              ${RED}E${NC} - Exit\n"
 
     # Read user choice
     read -p "Enter your choice (A/R/K/C/E): " choice
@@ -94,6 +94,11 @@ while true; do
         C|c)
             printf "\n${YELLOW}Current environment configurations:\n\n"
             cat kubernetes/environment.yaml
+            ;;
+        I|i)
+            printf "\n${YELLOW}Installing all packages..."
+            npm i
+            printf "\n${GREEN}Packages instalation done.\n\n"
             ;;
         E|e)
             echo "Exiting..."
