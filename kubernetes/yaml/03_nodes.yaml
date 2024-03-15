@@ -142,10 +142,6 @@ data:
     Blocks = 20
     Percentile = 60
     
-    [Shh]
-    MaxMessageSize = 1048576
-    MinimumAcceptedPOW = 2e-01
-    
     [Node]
     UserIdent = "miner01"
     DataDir = "/etc/testnet/miner01"
@@ -158,7 +154,7 @@ data:
     WSHost = "0.0.0.0"
     WSPort = 8546
     WSOrigins = ["*"]
-    WSModules = ["net", "web3", "eth", "shh"]
+    WSModules = ["net", "web3", "eth"]
     
     [Node.P2P]
     MaxPeers = 25
@@ -171,14 +167,6 @@ data:
     TrustedNodes = []
     ListenAddr = ":30303"
     EnableMsgEvents = false
-    
-    
-    [Dashboard]
-    Host = "0.0.0.0"
-    Port = 8080
-    Refresh = 3000000000
-    
-    
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -223,10 +211,6 @@ data:
     Blocks = 20
     Percentile = 60
     
-    [Shh]
-    MaxMessageSize = 1048576
-    MinimumAcceptedPOW = 2e-01
-    
     [Node]
     UserIdent = "miner02"
     DataDir = "/etc/testnet/miner02"
@@ -239,7 +223,7 @@ data:
     WSHost = "0.0.0.0"
     WSPort = 8546
     WSOrigins = ["*"]
-    WSModules = ["net", "web3", "eth", "shh"]
+    WSModules = ["net", "web3", "eth"]
     
     [Node.P2P]
     MaxPeers = 25
@@ -252,14 +236,6 @@ data:
     TrustedNodes = []
     ListenAddr = ":30303"
     EnableMsgEvents = false
-    
-    
-    [Dashboard]
-    Host = "0.0.0.0"
-    Port = 8080
-    Refresh = 3000000000
-    
-    
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -304,10 +280,6 @@ data:
     Blocks = 20
     Percentile = 60
     
-    [Shh]
-    MaxMessageSize = 1048576
-    MinimumAcceptedPOW = 2e-01
-    
     [Node]
     UserIdent = "miner03"
     DataDir = "/etc/testnet/miner03"
@@ -320,7 +292,7 @@ data:
     WSHost = "0.0.0.0"
     WSPort = 8546
     WSOrigins = ["*"]
-    WSModules = ["net", "web3", "eth", "shh"]
+    WSModules = ["net", "web3", "eth"]
     
     [Node.P2P]
     MaxPeers = 25
@@ -333,14 +305,6 @@ data:
     TrustedNodes = []
     ListenAddr = ":30303"
     EnableMsgEvents = false
-    
-    
-    [Dashboard]
-    Host = "0.0.0.0"
-    Port = 8080
-    Refresh = 3000000000
-    
-    
 
 ---
 apiVersion: v1
@@ -357,6 +321,7 @@ spec:
     app: miner
     tier: backend
     name: miner01
+  type: NodePort
   ports:
     - name: miner01-jsonrpc
       protocol: TCP
@@ -394,6 +359,7 @@ spec:
     app: miner
     tier: backend
     name: miner02
+  type: NodePort
   ports:
     - name: miner02-jsonrpc
       protocol: TCP
@@ -431,6 +397,7 @@ spec:
     app: miner
     tier: backend
     name: miner03
+  type: NodePort
   ports:
     - name: miner03-jsonrpc
       protocol: TCP
@@ -480,7 +447,7 @@ spec:
     spec:
       containers:
       - name: miner01-container
-        image: ethereum/client-go:v1.9.0
+        image: ethereum/client-go:v1.10.26
         imagePullPolicy: Always
         command: [ "sh" ]
         args:
@@ -497,10 +464,9 @@ spec:
            sed -i \"s/BootstrapNodesV5 = \\[\\]/BootstrapNodesV5 = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/miner01/gethconfig.toml;
         
            /usr/local/bin/geth \
-           --dashboard \
            --mine \
            --verbosity 3  \
-           --unlock 0xc11ba4c7c24f70e7a581c7daa92eac108099acec --allow-insecure-unlock --password /etc/testnet/miner01/password.txt --gasprice '0x0' --targetgaslimit '9000000000000'  \
+           --unlock 0xc11ba4c7c24f70e7a581c7daa92eac108099acec --allow-insecure-unlock --password /etc/testnet/miner01/password.txt \
            --config /etc/geth/miner01/gethconfig.toml;"
         ports:
           - containerPort: 8545
@@ -574,7 +540,7 @@ spec:
     spec:
       containers:
       - name: miner02-container
-        image: ethereum/client-go:v1.9.0
+        image: ethereum/client-go:v1.10.26
         imagePullPolicy: Always
         command: [ "sh" ]
         args:
@@ -591,10 +557,9 @@ spec:
            sed -i \"s/BootstrapNodesV5 = \\[\\]/BootstrapNodesV5 = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/miner02/gethconfig.toml;
         
            /usr/local/bin/geth \
-           --dashboard \
            --mine \
            --verbosity 3  \
-           --unlock 0x4c92786b90d848eaa3f4ef46918af724a309ae79 --allow-insecure-unlock --password /etc/testnet/miner02/password.txt --gasprice '0x0' --targetgaslimit '9000000000000'  \
+           --unlock 0x4c92786b90d848eaa3f4ef46918af724a309ae79 --allow-insecure-unlock --password /etc/testnet/miner02/password.txt \
            --config /etc/geth/miner02/gethconfig.toml;"
         ports:
           - containerPort: 8545
@@ -668,7 +633,7 @@ spec:
     spec:
       containers:
       - name: miner03-container
-        image: ethereum/client-go:v1.9.0
+        image: ethereum/client-go:v1.10.26
         imagePullPolicy: Always
         command: [ "sh" ]
         args:
@@ -685,10 +650,9 @@ spec:
            sed -i \"s/BootstrapNodesV5 = \\[\\]/BootstrapNodesV5 = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/miner03/gethconfig.toml;
         
            /usr/local/bin/geth \
-           --dashboard \
            --mine \
            --verbosity 3  \
-           --unlock 0x4e7afbdc9413eeb582b3f1be49d652fa714484da --allow-insecure-unlock --password /etc/testnet/miner03/password.txt --gasprice '0x0' --targetgaslimit '9000000000000'  \
+           --unlock 0x4e7afbdc9413eeb582b3f1be49d652fa714484da --allow-insecure-unlock --password /etc/testnet/miner03/password.txt \
            --config /etc/geth/miner03/gethconfig.toml;"
         ports:
           - containerPort: 8545

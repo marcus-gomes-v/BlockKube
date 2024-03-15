@@ -39,6 +39,7 @@ spec:
     app: miner
     tier: backend
     name: <%= node.geth.Node_UserIdent %>
+  type: NodePort
   ports:
     - name: <%= node.geth.Node_UserIdent %>-jsonrpc
       protocol: TCP
@@ -110,10 +111,9 @@ spec:
            sed -i \"s/BootstrapNodesV5 = \\[\\]/BootstrapNodesV5 = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml;
         <% } %>
            /usr/local/bin/geth \
-           <% if(node.geth.Dashboard_Port || node.geth.Dashboard_Refresh) { %>--dashboard \<% } %>
            <% if(node.geth.Eth_Etherbase && node.geth.Eth_Password) { %>--mine \<% } %>
            --verbosity <%= config.geth.network.verbosity %>  \
-           <% if(node.geth.Eth_Etherbase && node.geth.Eth_Password){ %>--unlock <%= node.geth.Eth_Etherbase %> --allow-insecure-unlock --password <%= node.geth.Node_DataDir %>/password.txt --gasprice '<%= config.geth.network.gasPrice %>' --targetgaslimit '<%= config.geth.network.gasLimit %>'  \<% } %>
+           <% if(node.geth.Eth_Etherbase && node.geth.Eth_Password){ %>--unlock <%= node.geth.Eth_Etherbase %> --allow-insecure-unlock --password <%= node.geth.Node_DataDir %>/password.txt \<% } %>
            --config /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml;"
         ports:
           - containerPort: <%= node.geth.Node_HTTPPort %>

@@ -31,10 +31,6 @@ Lifetime = 10800000000000
 Blocks = 20
 Percentile = 60
 
-[Shh]
-MaxMessageSize = 1048576
-MinimumAcceptedPOW = 2e-01
-
 [Node]
 UserIdent = "<%= Node_UserIdent %>"
 DataDir = "<%= Node_DataDir %>"
@@ -47,7 +43,7 @@ HTTPModules = ["db", "eth", "net", "web3", "personal", "miner", "admin", "clique
 WSHost = "0.0.0.0"
 WSPort = <%= Node_WSPort %>
 WSOrigins = ["*"]
-WSModules = ["net", "web3", "eth", "shh"]
+WSModules = ["net", "web3", "eth"]
 
 [Node.P2P]
 MaxPeers = 25
@@ -60,10 +56,3 @@ StaticNodes = []
 TrustedNodes = []
 ListenAddr = ":<%= NodeP2P_DiscoveryAddr %>"
 EnableMsgEvents = false
-
-<% if (Dashboard_Port || Dashboard_Refresh) { %>
-[Dashboard]
-Host = "0.0.0.0"
-Port = <%= Dashboard_Port %>
-Refresh = <%= Dashboard_Refresh %>
-<% } %>

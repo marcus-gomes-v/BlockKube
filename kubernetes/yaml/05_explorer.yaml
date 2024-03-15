@@ -10,7 +10,7 @@ metadata:
 data:
   config.json: |-
     {
-        "nodeAddr":     "miner01-rpchost",
+        "nodeAddr":     "miner01-svc",
         "gethPort":     8545,
         "startBlock":   0,
         "endBlock":     "latest",
