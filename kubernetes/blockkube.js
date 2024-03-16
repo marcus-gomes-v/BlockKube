@@ -46,9 +46,8 @@ config.bootnodes.forEach((bootnode, index) => {
 });
 
 
-
 // Generate node TOML files for nodes
-config.nodes.forEach(node => {
+config.miners.forEach(node => {
     const nodeVars = setNodeTemplateVars(node);
     // Pass both nodeVars and config to the template
     const nodeTomlContent = renderTemplate('node.toml.ejs', {
@@ -58,9 +57,20 @@ config.nodes.forEach(node => {
     fs.writeFileSync(`${nodeVars.Node_UserIdent}.toml`, nodeTomlContent);
 });
 
+config.fullnodes.forEach(node => {
+    const nodeVars = setNodeTemplateVars(node);
+    // Pass both nodeVars and config to the template
+    const nodeTomlContent = renderTemplate('fullnode.toml.ejs', {
+        ...nodeVars, // spread the nodeVars to pass all its properties
+        config: config // pass the entire config object
+    });
+    fs.writeFileSync(`${nodeVars.Node_UserIdent}.toml`, nodeTomlContent);
+});
+
 // Generate YAML files
 const claimsContent = renderTemplate('00_claims.yaml.ejs', {
-    nodes: config.nodes.map(setNodeTemplateVars),
+    nodes: config.miners.map(setNodeTemplateVars),
+    fullnodes: config.fullnodes.map(setNodeTemplateVars),
     bootnodes: config.bootnodes.map(setBootNodeTemplateVars),
     config: config
 });
@@ -94,13 +104,14 @@ const bootnodeFileContents = config.bootnodes.map(bootnode => {
     };
 });
 
+
 const bootnodesContent = renderTemplate('02_bootnodes.yaml.ejs', {
     bootnodes: bootnodeFileContents,
     config: config
 });
 fs.writeFileSync('yaml/02_bootnodes.yaml', bootnodesContent);
 
-const nodesFileContents = config.nodes.map(node => {
+const nodesFileContents = config.miners.map(node => {
     const nodeKey = Object.keys(node)[0];
     const nodeData = node[nodeKey];
 
@@ -126,17 +137,39 @@ const nodesConfigContent = renderTemplate('03_nodes.yaml.ejs', {
 });
 fs.writeFileSync('yaml/03_nodes.yaml', nodesConfigContent);
 
-const monitorConfigContent = renderTemplate('04_monitor.yaml.ejs', { 
-    nodes: config.nodes.map(setNodeTemplateVars),
+
+const fullnodesFileContents = config.fullnodes.map(node => {
+    const nodeKey = Object.keys(node)[0];
+    const nodeData = node[nodeKey];
+
+    // Read TOML file content
+    const tomlFilename = `${nodeData.geth.Node_UserIdent}.toml`;
+    const tomlFileContent = fs.readFileSync(tomlFilename, 'utf-8');
+
+    return {
+        ...nodeData,
+        tomlFileContent: tomlFileContent
+    };
+});
+
+const fullnodesConfigContent = renderTemplate('04_fullnodes.yaml.ejs', { 
+    fullnodes: fullnodesFileContents,
+    config: config
+});
+fs.writeFileSync('yaml/04_fullnodes.yaml', fullnodesConfigContent);
+
+const monitorConfigContent = renderTemplate('05_monitor.yaml.ejs', { 
+    nodes: config.miners.map(setNodeTemplateVars),
+    fullnodes: config.fullnodes.map(setNodeTemplateVars),
     config: config 
 });
-fs.writeFileSync('yaml/04_monitor.yaml', monitorConfigContent);
+fs.writeFileSync('yaml/05_monitor.yaml', monitorConfigContent);
 
-const explorerConfigContent = renderTemplate('05_explorer.yaml.ejs', { config: config });
-fs.writeFileSync('yaml/05_explorer.yaml', explorerConfigContent);
+const explorerConfigContent = renderTemplate('06_explorer.yaml.ejs', { config: config });
+fs.writeFileSync('yaml/06_explorer.yaml', explorerConfigContent);
 
-const backendConfigContent = renderTemplate('06_backend.yaml.ejs', { config: config });
-fs.writeFileSync('yaml/06_backend.yaml', backendConfigContent);
+const backendConfigContent = renderTemplate('07_backend.yaml.ejs', { config: config });
+fs.writeFileSync('yaml/07_backend.yaml', backendConfigContent);
 
-const loadBalancersContent = renderTemplate('07_load_balancers.yaml.ejs', { config: config });
-fs.writeFileSync('yaml/07_load_balancers.yaml', loadBalancersContent);
+const loadBalancersContent = renderTemplate('08_load_balancers.yaml.ejs', { config: config });
+fs.writeFileSync('yaml/08_load_balancers.yaml', loadBalancersContent);

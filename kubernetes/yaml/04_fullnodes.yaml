@@ -1,0 +1,174 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gethconfig-fullnode01
+  namespace: default
+  labels:
+    app: fullnode
+    name: gethconfig-fullnode01
+data:
+  gethconfig: |-
+    [Eth]
+    NetworkId = 123456
+    SyncMode = "full"
+    LightPeers = 100
+    DatabaseCache = 768
+    EnablePreimageRecording = false
+    
+    [Eth.TxPool]
+    Locals = []
+    NoLocals = false
+    Journal = "transactions.rlp"
+    Rejournal = 3600000000000
+    PriceLimit = 1
+    PriceBump = 10
+    AccountSlots = 16
+    GlobalSlots = 4096
+    AccountQueue = 64
+    GlobalQueue = 1024
+    Lifetime = 10800000000000
+    
+    [Eth.GPO]
+    Blocks = 20
+    Percentile = 60
+    
+    [Node]
+    UserIdent = "fullnode01"
+    DataDir = "/etc/testnet/fullnode01"
+    IPCPath = "/etc/testnet/fullnode01/geth.ipc"
+    HTTPHost = "0.0.0.0"
+    HTTPPort = 8545
+    HTTPCors = ["*"]
+    HTTPVirtualHosts = ["*"]
+    HTTPModules = ["net", "web3", "eth"]
+    WSHost = "0.0.0.0"
+    WSPort = 8546
+    WSOrigins = ["*"]
+    WSModules = ["net", "web3", "eth"]
+    
+    [Node.P2P]
+    MaxPeers = 50
+    NoDiscovery = false
+    BootstrapNodes = []
+    BootstrapNodesV5 = []
+    StaticNodes = []
+    TrustedNodes = []
+    ListenAddr = ":30303"
+    EnableMsgEvents = false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fullnode01-svc
+  namespace: default
+  labels:
+    app: fullnode
+    tier: backend
+    name: fullnode01-svc
+spec:
+  selector:
+    app: fullnode
+    tier: backend
+    name: fullnode01
+  type: NodePort
+  ports:
+    - name: fullnode01-jsonrpc
+      protocol: TCP
+      port: 8545
+      targetPort: 8545
+    - name: fullnode01-wsrpc
+      protocol: TCP
+      port: 8546
+      targetPort: 8546
+    - name: fullnode01-ipc-discovery
+      protocol: TCP
+      port: 30303
+      targetPort: 30303
+    - name: fullnode01-dashboard
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: default
+  labels:
+    app: fullnode
+    tier: backend
+    name: fullnode01
+  name: fullnode01
+spec:
+  selector:
+    matchLabels:
+      app: fullnode
+  replicas: 1
+  serviceName: fullnode01
+  template:
+    metadata:
+      labels:
+        app: fullnode
+        tier: backend
+        name: fullnode01
+    spec:
+      containers:
+      - name: fullnode01-container
+        image: ethereum/client-go:v1.10.26
+        imagePullPolicy: Always
+        command: [ "sh" ]
+        args:
+        - "-cx"
+        - "/usr/local/bin/geth --datadir /etc/testnet/fullnode01 init /etc/geth/genesis/genesis-geth.json;
+           touch /etc/testnet/fullnode01/genesis_created;
+           echo  > /etc/testnet/fullnode01/password.txt;
+           mkdir -p /etc/geth/fullnode01;
+           cp /etc/gethconfigmap/fullnode01/gethconfig.toml /etc/geth/fullnode01;
+        
+           ENODE=$(cat /etc/testnet/bootnode/enode.address);
+           ENODE_ESC=$(echo $ENODE | sed 's@//@\\\\/\\\\/@g');
+           sed -i \"s/BootstrapNodes = \\[\\]/BootstrapNodes = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/fullnode01/gethconfig.toml;
+           sed -i \"s/BootstrapNodesV5 = \\[\\]/BootstrapNodesV5 = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/fullnode01/gethconfig.toml;
+        
+           /usr/local/bin/geth \
+           --allow-insecure-unlock \
+           --verbosity 3  \
+           --config /etc/geth/fullnode01/gethconfig.toml;"
+        ports:
+          - containerPort: 8545
+          - containerPort: 8546
+          
+            protocol: UDP
+          - containerPort: 30303
+        volumeMounts:
+        - name: fullnode01-persistent-storage
+          mountPath: /etc/testnet/fullnode01
+        - name: fullnode01-config-persistent-storage
+          mountPath: /etc/gethconfigmap/fullnode01
+        - name: geth-boot-node-persistent-storage
+          mountPath: /etc/testnet/bootnode
+        - name: genesis-config-persistent-storage
+          mountPath: /etc/geth/genesis/genesis-geth.json
+          subPath: genesis-geth.json
+      volumes:
+      - name: geth-boot-node-persistent-storage
+        hostPath:
+          path: /var/lib/docker/geth-storage/bootnode
+      - name: genesis-config-persistent-storage
+        configMap:
+          name: genesis-config
+          items:
+          - key: genesis-geth.json
+            path: genesis-geth.json
+      - name: fullnode01-persistent-storage
+        persistentVolumeClaim:
+          claimName: volume-fullnode01
+      - name: fullnode01-config-persistent-storage
+        configMap:
+          name: gethconfig-fullnode01
+          items:
+          - key: gethconfig
+            path: gethconfig.toml
+

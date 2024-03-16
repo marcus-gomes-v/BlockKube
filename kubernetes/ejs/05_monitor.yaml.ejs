@@ -13,6 +13,7 @@ metadata:
   labels:
     app: kuberneteth
     name: monitor-config
+    io.kompose.service: monitor
 data:
   app.json: |-
     [
@@ -29,7 +30,7 @@ data:
         "env":
         {
           "NODE_ENV"        : "production",
-          "RPC_HOST"        : "<%= node.Node_UserIdent %>-rpchost",
+          "RPC_HOST"        : "<%= node.Node_UserIdent %>--jsonrpc",
           "RPC_PORT"        : "<%= node.Node_HTTPPort %>",
           "LISTENING_PORT"  : "<%= node.NodeP2P_DiscoveryAddr %>",
           "INSTANCE_NAME"   : "<%= node.Node_UserIdent %>",
@@ -38,7 +39,31 @@ data:
           "WS_SECRET"       : "<%= config.monitor.ws_secret %>",
           "VERBOSITY"       : <%= config.monitor.verbosity %>
         }
-      }<%= index < nodes.length - 1 ? ',' : '' %>
+      },
+      <% }); %>
+       <% fullnodes.forEach((node, index) => { %>
+      {
+        "name"              : "<%= node.Node_UserIdent %>",
+        "cwd"               : ".",
+        "script"            : "app.js",
+        "log_date_format"   : "YYYY-MM-DD HH:mm Z",
+        "merge_logs"        : false,
+        "watch"             : false,
+        "exec_interpreter"  : "node",
+        "exec_mode"         : "fork_mode",
+        "env":
+        {
+          "NODE_ENV"        : "production",
+          "RPC_HOST"        : "<%= node.Node_UserIdent %>--jsonrpc",
+          "RPC_PORT"        : "<%= node.Node_HTTPPort %>",
+          "LISTENING_PORT"  : "<%= node.NodeP2P_DiscoveryAddr %>",
+          "INSTANCE_NAME"   : "<%= node.Node_UserIdent %>",
+          "CONTACT_DETAILS" : "",
+          "WS_SERVER"       : "localhost:3001",
+          "WS_SECRET"       : "<%= config.monitor.ws_secret %>",
+          "VERBOSITY"       : <%= config.monitor.verbosity %>
+        }
+      }<%= index < fullnodes.length - 1 ? ',' : '' %>
       <% }); %>
     ]
 ---
@@ -51,6 +76,7 @@ metadata:
     app: kuberneteth
     tier: frontend
     name: <%= config.monitor.name %>-svc
+    io.kompose.service: monitor
 spec:
   selector:
     app: kuberneteth
@@ -58,9 +84,9 @@ spec:
 <% if (config.monitor.k8s.nodePort) { %>
   type: LoadBalancer
 <% } %>
+  type: NodePort
   ports:
-    - name: <%= config.monitor.name %>-port
-      protocol: TCP
+    - protocol: TCP
       port: 3001
 <% if (config.monitor.k8s.nodePort) { %>
       nodePort: <%= config.monitor.k8s.nodePort %>
@@ -84,6 +110,7 @@ spec:
         app: kuberneteth
         tier: frontend
         name: <%= config.monitor.name %>
+        io.kompose.service: monitor
     spec:
       initContainers:
       - name: <%= config.monitor.name %>-init-container
@@ -95,7 +122,10 @@ spec:
         - "cp -r /eth-net-intelligence-api/* /ethmonitor;
            cp /monitor-configmap/app.json /ethmonitor/app.json;
            <% nodes.forEach(node => { %>
-           sed -i \"s/<%= node.Node_UserIdent %>-rpchost/$<%= escapeNodeUserIdent(node.Node_UserIdent) %>_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           sed -i \"s/<%= node.Node_UserIdent %>--jsonrpc/$<%= escapeNodeUserIdent(node.Node_UserIdent) %>_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           <% }); %>
+           <% fullnodes.forEach(node => { %>
+           sed -i \"s/<%= node.Node_UserIdent %>--jsonrpc/$<%= escapeNodeUserIdent(node.Node_UserIdent) %>_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
            <% }); %>
            exit 0;"
         volumeMounts:
@@ -133,3 +163,24 @@ spec:
         persistentVolumeClaim:
           claimName: volume-ethmonitor
 ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitor-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: monitor.localhost
+    http:
+      paths:
+      - path: /(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: monitor-svc
+            port:
+              number: 3001
+

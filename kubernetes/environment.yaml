@@ -16,7 +16,7 @@ bootnodes:
       NodeP2P_DiscoveryAddr: 30303
       Dashboard_Port: 8080
       Dashboard_Refresh: 3000000000
-nodes:
+miners:
 - miner01:
     k8s:
       replicas: 1
@@ -59,6 +59,19 @@ nodes:
       NodeP2P_DiscoveryAddr: 30303
       Dashboard_Port: 8080
       Dashboard_Refresh: 3000000000
+fullnodes:
+- fullnode01:
+    k8s:
+      replicas: 1
+    geth:
+      storage_size: 20
+      Node_UserIdent: fullnode01
+      Node_DataDir: /etc/testnet/fullnode01
+      Node_HTTPPort: 8545
+      Node_WSPort: 8546
+      NodeP2P_DiscoveryAddr: 30303
+      Dashboard_Port: 8080
+      Dashboard_Refresh: 3000000000
 monitor:
   name: monitor
   ws_secret: "123"
@@ -74,7 +87,7 @@ monitor:
 explorer:
   name: explorer
   storage_size: 10
-  explorerNode: miner01
+  explorerNode: fullnode01
   explorerHTTPPort: 8545
   k8s:
     externalPort: 80

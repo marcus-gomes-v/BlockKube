@@ -9,6 +9,7 @@ metadata:
   labels:
     app: kuberneteth
     name: monitor-config
+    io.kompose.service: monitor
 data:
   app.json: |-
     [
@@ -25,7 +26,7 @@ data:
         "env":
         {
           "NODE_ENV"        : "production",
-          "RPC_HOST"        : "miner01-rpchost",
+          "RPC_HOST"        : "miner01--jsonrpc",
           "RPC_PORT"        : "8545",
           "LISTENING_PORT"  : "30303",
           "INSTANCE_NAME"   : "miner01",
@@ -48,7 +49,7 @@ data:
         "env":
         {
           "NODE_ENV"        : "production",
-          "RPC_HOST"        : "miner02-rpchost",
+          "RPC_HOST"        : "miner02--jsonrpc",
           "RPC_PORT"        : "8545",
           "LISTENING_PORT"  : "30303",
           "INSTANCE_NAME"   : "miner02",
@@ -71,10 +72,34 @@ data:
         "env":
         {
           "NODE_ENV"        : "production",
-          "RPC_HOST"        : "miner03-rpchost",
+          "RPC_HOST"        : "miner03--jsonrpc",
           "RPC_PORT"        : "8545",
           "LISTENING_PORT"  : "30303",
           "INSTANCE_NAME"   : "miner03",
+          "CONTACT_DETAILS" : "",
+          "WS_SERVER"       : "localhost:3001",
+          "WS_SECRET"       : "123",
+          "VERBOSITY"       : 3
+        }
+      },
+      
+       
+      {
+        "name"              : "fullnode01",
+        "cwd"               : ".",
+        "script"            : "app.js",
+        "log_date_format"   : "YYYY-MM-DD HH:mm Z",
+        "merge_logs"        : false,
+        "watch"             : false,
+        "exec_interpreter"  : "node",
+        "exec_mode"         : "fork_mode",
+        "env":
+        {
+          "NODE_ENV"        : "production",
+          "RPC_HOST"        : "fullnode01--jsonrpc",
+          "RPC_PORT"        : "8545",
+          "LISTENING_PORT"  : "30303",
+          "INSTANCE_NAME"   : "fullnode01",
           "CONTACT_DETAILS" : "",
           "WS_SERVER"       : "localhost:3001",
           "WS_SECRET"       : "123",
@@ -93,14 +118,15 @@ metadata:
     app: kuberneteth
     tier: frontend
     name: monitor-svc
+    io.kompose.service: monitor
 spec:
   selector:
     app: kuberneteth
     tier: frontend
 
+  type: NodePort
   ports:
-    - name: monitor-port
-      protocol: TCP
+    - protocol: TCP
       port: 3001
 
 ---
@@ -122,6 +148,7 @@ spec:
         app: kuberneteth
         tier: frontend
         name: monitor
+        io.kompose.service: monitor
     spec:
       initContainers:
       - name: monitor-init-container
@@ -133,11 +160,14 @@ spec:
         - "cp -r /eth-net-intelligence-api/* /ethmonitor;
            cp /monitor-configmap/app.json /ethmonitor/app.json;
            
-           sed -i \"s/miner01-rpchost/$MINER01_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           sed -i \"s/miner01--jsonrpc/$MINER01_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
            
-           sed -i \"s/miner02-rpchost/$MINER02_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           sed -i \"s/miner02--jsonrpc/$MINER02_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
            
-           sed -i \"s/miner03-rpchost/$MINER03_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           sed -i \"s/miner03--jsonrpc/$MINER03_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
+           
+           
+           sed -i \"s/fullnode01--jsonrpc/$FULLNODE01_SVC_SERVICE_HOST/g\" /ethmonitor/app.json;
            
            exit 0;"
         volumeMounts:
@@ -175,3 +205,24 @@ spec:
         persistentVolumeClaim:
           claimName: volume-ethmonitor
 ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitor-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: monitor.localhost
+    http:
+      paths:
+      - path: /(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: monitor-svc
+            port:
+              number: 3001
+

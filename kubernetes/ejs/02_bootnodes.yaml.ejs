@@ -1,15 +1,15 @@
 <% bootnodes.forEach(bootnode=> { %>---
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keystore-config-<%= bootnode.geth.Node_UserIdent %>
+  namespace: default
+  labels:
+    app: bootnode
     name: keystore-config-<%= bootnode.geth.Node_UserIdent %>
-        namespace: default
-        labels:
-        app: bootnode
-        name: keystore-config-<%= bootnode.geth.Node_UserIdent %>
-            data:
-            <%= bootnode.keystoreFilename %>: |-
-                <%- bootnode.keystoreFileContent.split('\n').join('\n ') %>
+data:
+  <%= bootnode.keystoreFilename %>: |-
+    <%- bootnode.keystoreFileContent.split('\n').join('\n    ') %>
 <% }); %>
 <% bootnodes.forEach(bootnode => { %>---
 apiVersion: v1
@@ -22,7 +22,7 @@ metadata:
     name: gethconfig-<%= bootnode.geth.Node_UserIdent %>
 data:
   gethconfig: |-
-    <%- bootnode.tomlFileContent.split(' \n').join('\n ') %>
+    <%- bootnode.tomlFileContent.split('\n').join('\n    ') %>
 <% }); %>
 <% bootnodes.forEach(bootnode=> { %>---
 apiVersion: v1

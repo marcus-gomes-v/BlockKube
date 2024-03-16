@@ -1,0 +1,128 @@
+<% fullnodes.forEach(node => { %>---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gethconfig-<%= node.geth.Node_UserIdent %>
+  namespace: default
+  labels:
+    app: fullnode
+    name: gethconfig-<%= node.geth.Node_UserIdent %>
+data:
+  gethconfig: |-
+    <%- node.tomlFileContent.split('\n').join('\n    ') %>
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: <%= node.geth.Node_UserIdent %>-svc
+  namespace: default
+  labels:
+    app: fullnode
+    tier: backend
+    name: <%= node.geth.Node_UserIdent %>-svc
+spec:
+  selector:
+    app: fullnode
+    tier: backend
+    name: <%= node.geth.Node_UserIdent %>
+  type: NodePort
+  ports:
+    - name: <%= node.geth.Node_UserIdent %>-jsonrpc
+      protocol: TCP
+      port: <%= node.geth.Node_HTTPPort %>
+      targetPort: <%= node.geth.Node_HTTPPort %>
+    - name: <%= node.geth.Node_UserIdent %>-wsrpc
+      protocol: TCP
+      port: <%= node.geth.Node_WSPort %>
+      targetPort: <%= node.geth.Node_WSPort %>
+    - name: <%= node.geth.Node_UserIdent %>-ipc-discovery
+      protocol: TCP
+      port: <%= node.geth.NodeP2P_DiscoveryAddr %>
+      targetPort: <%= node.geth.NodeP2P_DiscoveryAddr %>
+    - name: <%= node.geth.Node_UserIdent %>-dashboard
+      protocol: TCP
+      port: <%= node.geth.Dashboard_Port %>
+      targetPort: <%= node.geth.Dashboard_Port %>
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: default
+  labels:
+    app: fullnode
+    tier: backend
+    name: <%= node.geth.Node_UserIdent %>
+  name: <%= node.geth.Node_UserIdent %>
+spec:
+  selector:
+    matchLabels:
+      app: fullnode
+  replicas: <%= node.k8s.replicas %>
+  serviceName: <%= node.geth.Node_UserIdent %>
+  template:
+    metadata:
+      labels:
+        app: fullnode
+        tier: backend
+        name: <%= node.geth.Node_UserIdent %>
+    spec:
+      containers:
+      - name: <%= node.geth.Node_UserIdent %>-container
+        image: ethereum/client-go:<%= config.geth.version %>
+        imagePullPolicy: Always
+        command: [ "sh" ]
+        args:
+        - "-cx"
+        - "/usr/local/bin/geth --datadir <%= node.geth.Node_DataDir %> init /etc/geth/genesis/genesis-geth.json;
+           touch <%= node.geth.Node_DataDir %>/genesis_created;
+           echo <%= node.geth.Eth_Password %> > <%= node.geth.Node_DataDir %>/password.txt;
+           mkdir -p /etc/geth/<%= node.geth.Node_UserIdent %>;
+           cp /etc/gethconfigmap/<%= node.geth.Node_UserIdent %>/gethconfig.toml /etc/geth/<%= node.geth.Node_UserIdent %>;
+        <% if (!config.geth.network.public) { %>
+           ENODE=$(cat /etc/testnet/bootnode/enode.address);
+           ENODE_ESC=$(echo $ENODE | sed 's@//@\\\\/\\\\/@g');
+           sed -i \"s/BootstrapNodes = \\[\\]/BootstrapNodes = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml;
+           sed -i \"s/BootstrapNodesV5 = \\[\\]/BootstrapNodesV5 = [\\\"$ENODE_ESC\\\"]/g\" /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml;
+        <% } %>
+           /usr/local/bin/geth \
+           --allow-insecure-unlock \
+           --verbosity <%= config.geth.network.verbosity %>  \
+           --config /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml;"
+        ports:
+          - containerPort: <%= node.geth.Node_HTTPPort %>
+          - containerPort: <%= node.geth.Node_WSPort %>
+          <% if (node.geth.NodeP2P_ListenAddr) { %>- containerPort: <%= node.geth.NodeP2P_ListenAddr %><% } %>
+            protocol: UDP
+          <% if (node.geth.NodeP2P_DiscoveryAddr) { %>- containerPort: <%= node.geth.NodeP2P_DiscoveryAddr %><% } %>
+        volumeMounts:
+        - name: <%= node.geth.Node_UserIdent %>-persistent-storage
+          mountPath: <%= node.geth.Node_DataDir %>
+        - name: <%= node.geth.Node_UserIdent %>-config-persistent-storage
+          mountPath: /etc/gethconfigmap/<%= node.geth.Node_UserIdent %>
+        - name: geth-boot-node-persistent-storage
+          mountPath: /etc/testnet/bootnode
+        - name: genesis-config-persistent-storage
+          mountPath: /etc/geth/genesis/genesis-geth.json
+          subPath: genesis-geth.json
+      volumes:
+      - name: geth-boot-node-persistent-storage
+        hostPath:
+          path: /var/lib/docker/geth-storage/bootnode
+      - name: genesis-config-persistent-storage
+        configMap:
+          name: genesis-config
+          items:
+          - key: genesis-geth.json
+            path: genesis-geth.json
+      - name: <%= node.geth.Node_UserIdent %>-persistent-storage
+        persistentVolumeClaim:
+          claimName: volume-<%= node.geth.Node_UserIdent %>
+      - name: <%= node.geth.Node_UserIdent %>-config-persistent-storage
+        configMap:
+          name: gethconfig-<%= node.geth.Node_UserIdent %>
+          items:
+          - key: gethconfig
+            path: gethconfig.toml
+<% }); %>
