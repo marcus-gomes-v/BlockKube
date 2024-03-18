@@ -107,7 +107,7 @@ keystore:
 geth:
   version: v1.10.26
   network:
-    id: 123456
+    id: 600
     period: 5
     verbosity: 3
     epoch: 30000

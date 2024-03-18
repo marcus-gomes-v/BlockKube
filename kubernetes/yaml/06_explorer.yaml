@@ -10,7 +10,7 @@ metadata:
 data:
   config.json: |-
     {
-        "nodeAddr":     "miner01-rpchost",
+        "nodeAddr":     "fullnode01-svc",
         "gethPort":     8545,
         "startBlock":   0,
         "endBlock":     "latest",
@@ -68,7 +68,7 @@ spec:
         args:
         - "-cx"
         - "cp -f /explorer-configmap/config.json /explorer/config.json;
-           sed -i \"s/miner01-rpchost/$MINER01_SVC_SERVICE_HOST/g\" /explorer/config.json;
+           sed -i \"s/fullnode01-rpchost/$FULLNODE01_SVC_SERVICE_HOST/g\" /explorer/config.json;
            npm start app.js;
            exit 0;"
         ports:

@@ -44,7 +44,7 @@ metadata:
 data:
   gethconfig: |-
     [Eth]
-    NetworkId = 123456
+    NetworkId = 600
     SyncMode = "full"
     LightPeers = 100
     DatabaseCache = 768
