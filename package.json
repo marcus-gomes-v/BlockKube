@@ -1,6 +1,6 @@
 {
   "name": "block-kube",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "![BlockKube](logo.png)",
   "main": "index.js",
   "scripts": {
