@@ -86,16 +86,8 @@ monitor:
         path: genesis-geth.json
 explorer:
   name: explorer
-  storage_size: 10
   explorerNode: fullnode01
   explorerHTTPPort: 8545
-  k8s:
-    externalPort: 80
-    configMap:
-      name: explorer-config
-      items:
-      - key: config.json
-        path: config.json
 keystore:
   secret: false
   items:
