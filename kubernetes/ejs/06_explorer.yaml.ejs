@@ -6,9 +6,9 @@ metadata:
   labels:
     app: blockkube-x
 data:
-  NEXT_PUBLIC_ETH_NODE_URL: "<%= config.explorer.explorerNode %>--jsonrpc:<%= config.explorer.explorerHTTPPort %>"
+  ETH_NODE_URL: "http://<%= config.explorer.explorerNode %>-svc:<%= config.explorer.explorerHTTPPort %>"
   MONGODB_URI: "mongodb://mongodb-svc/block-kube-x"
-  INDEX_PAST_BLOCKS: "false"
+  INDEX_PAST_BLOCKS: "true"
 ---
 apiVersion: v1
 kind: Service
@@ -27,13 +27,12 @@ spec:
       targetPort: 3000
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   namespace: default
   name: blockkube-x
-  labels:
-    app: blockkube-x
 spec:
+  serviceName: "blockkube-x"
   replicas: 1
   selector:
     matchLabels:

@@ -86,6 +86,7 @@ monitor:
         path: genesis-geth.json
 explorer:
   name: explorer
+  storage_size: 10
   explorerNode: fullnode01
   explorerHTTPPort: 8545
 keystore:

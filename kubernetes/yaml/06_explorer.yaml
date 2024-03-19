@@ -1,90 +1,52 @@
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: explorer-config
+  name: blockkube-x-config
   namespace: default
   labels:
-    name: explorer-config
-    app: kuberneteth
+    app: blockkube-x
 data:
-  config.json: |-
-    {
-        "nodeAddr":     "fullnode01-svc",
-        "gethPort":     8545,
-        "startBlock":   0,
-        "endBlock":     "latest",
-        "quiet":        true,
-        "syncAll":      true,
-        "patch":        true,
-        "patchBlocks":  100
-    }
+  ETH_NODE_URL: "http://fullnode01-svc:8545"
+  MONGODB_URI: "mongodb://mongodb-svc/block-kube-x"
+  INDEX_PAST_BLOCKS: "true"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: explorer-svc
+  name: blockkube-x-svc
   namespace: default
   labels:
-    app: kuberneteth
-    tier: frontend
-    name: explorer-svc
+    app: blockkube-x
 spec:
   selector:
-    app: kuberneteth
-    tier: frontend
-    name: explorer
-
+    app: blockkube-x
+  type: LoadBalancer
   ports:
-    - name: explorer-port
-      protocol: TCP
+    - protocol: TCP
       port: 3000
-
+      targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   namespace: default
-  name: explorer
+  name: blockkube-x
 spec:
+  serviceName: "blockkube-x"
+  replicas: 1
   selector:
     matchLabels:
-      app: kuberneteth
-  replicas: 1
-  serviceName: explorer
+      app: blockkube-x
   template:
     metadata:
-      name: explorer
       labels:
-        app: kuberneteth
-        tier: frontend
-        name: explorer
+        app: blockkube-x
     spec:
       containers:
-      - name: explorer
-        image: ijsfd/explorer:latest
-        imagePullPolicy: IfNotPresent
-        command: [ "sh" ]
-        args:
-        - "-cx"
-        - "cp -f /explorer-configmap/config.json /explorer/config.json;
-           sed -i \"s/fullnode01-rpchost/$FULLNODE01_SVC_SERVICE_HOST/g\" /explorer/config.json;
-           npm start app.js;
-           exit 0;"
+      - name: blockkube-x
+        image: vxmkz/blockkube-x:latest
         ports:
         - containerPort: 3000
-        env:
-        - name: MONGO_URI
-          value: 'mongodb://mongodb-svc/blockDB'
-        volumeMounts:
-        - name: explorer-configmap-volume
-          mountPath: /explorer-configmap/config.json
-          subPath: config.json
-      volumes:
-      - name: explorer-configmap-volume
-        configMap:
-          name: explorer-config
-          items:
-          - key: config.json
-            path: config.json
----
+        envFrom:
+        - configMapRef:
+            name: blockkube-x-config
