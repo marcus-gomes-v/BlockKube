@@ -78,7 +78,16 @@ while true; do
             node blockkube.js
             cd ..
             printf "\n${YELLOW}Applying Kubernetes configuration\n\n"
-            kubectl apply -f kubernetes/yaml/
+            kubectl apply -f kubernetes/yaml/00_claims.yaml
+            kubectl apply -f kubernetes/yaml/01_common-config.yaml
+            kubectl apply -f kubernetes/yaml/02_bootnodes.yaml
+            sleep 12
+            kubectl apply -f kubernetes/yaml/03_nodes.yaml
+            sleep 12
+            kubectl apply -f kubernetes/yaml/04_fullnodes.yaml
+            sleep 12
+            kubectl apply -f kubernetes/yaml/05_monitor.yaml
+            kubectl apply -f kubernetes/yaml/06_explorer.yaml
             ;;
         R|r)
             printf "\n${YELLOW}Resetting configurations..."
