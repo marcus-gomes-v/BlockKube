@@ -8,7 +8,7 @@ metadata:
 data:
   ETH_NODE_URL: "http://<%= config.explorer.explorerNode %>-svc:<%= config.explorer.explorerHTTPPort %>"
   MONGODB_URI: "mongodb://mongodb-svc/block-kube-x"
-  INDEX_PAST_BLOCKS: "true"
+  INDEX_PAST_BLOCKS: "false"
 ---
 apiVersion: v1
 kind: Service
