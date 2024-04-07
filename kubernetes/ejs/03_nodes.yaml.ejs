@@ -114,7 +114,8 @@ spec:
            <% if(node.geth.Eth_Etherbase && node.geth.Eth_Password) { %>--mine \<% } %>
            --verbosity <%= config.geth.network.verbosity %>  \
            <% if(node.geth.Eth_Etherbase && node.geth.Eth_Password){ %>--unlock <%= node.geth.Eth_Etherbase %> --allow-insecure-unlock --password <%= node.geth.Node_DataDir %>/password.txt \<% } %>
-           --config /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml;"
+           --config /etc/geth/<%= node.geth.Node_UserIdent %>/gethconfig.toml \
+           --miner.etherbase 0x<%= node.keystoreFilename.split('--')[2] %>;"
         ports:
           - containerPort: <%= node.geth.Node_HTTPPort %>
           - containerPort: <%= node.geth.Node_WSPort %>

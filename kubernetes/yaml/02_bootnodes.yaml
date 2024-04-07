@@ -50,15 +50,6 @@ data:
     DatabaseCache = 768
     EnablePreimageRecording = false
     
-    [Eth.Ethash]
-    CacheDir = "ethash"
-    CachesInMem = 2
-    CachesOnDisk = 3
-    DatasetDir = "/root/.ethash"
-    DatasetsInMem = 1
-    DatasetsOnDisk = 2
-    PowMode = 0
-    
     [Eth.TxPool]
     Locals = []
     NoLocals = false
@@ -147,7 +138,7 @@ spec:
     spec:
       containers:
       - name: geth-boot-node-setup-container
-        image: vxmkz/geth-bootnode:alltools-v1.10.26
+        image: vxmkz/geth-bootnode:alltools-v1.13.14
         imagePullPolicy: IfNotPresent
         command: [ "sh" ]
         args:
@@ -192,7 +183,7 @@ spec:
     spec:
       containers:
       - name: geth-bootnode-container
-        image: vxmkz/geth-bootnode:alltools-v1.10.26
+        image: vxmkz/geth-bootnode:alltools-v1.13.14
         imagePullPolicy: IfNotPresent
         command: [ "sh" ]
         args:

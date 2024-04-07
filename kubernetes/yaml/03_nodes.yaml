@@ -116,15 +116,6 @@ data:
     DatabaseCache = 768
     EnablePreimageRecording = false
     
-    [Eth.Ethash]
-    CacheDir = "ethash"
-    CachesInMem = 2
-    CachesOnDisk = 3
-    DatasetDir = "/root/.ethash"
-    DatasetsInMem = 1
-    DatasetsOnDisk = 2
-    PowMode = 0
-    
     [Eth.TxPool]
     Locals = []
     NoLocals = false
@@ -185,15 +176,6 @@ data:
     DatabaseCache = 768
     EnablePreimageRecording = false
     
-    [Eth.Ethash]
-    CacheDir = "ethash"
-    CachesInMem = 2
-    CachesOnDisk = 3
-    DatasetDir = "/root/.ethash"
-    DatasetsInMem = 1
-    DatasetsOnDisk = 2
-    PowMode = 0
-    
     [Eth.TxPool]
     Locals = []
     NoLocals = false
@@ -253,15 +235,6 @@ data:
     LightPeers = 100
     DatabaseCache = 768
     EnablePreimageRecording = false
-    
-    [Eth.Ethash]
-    CacheDir = "ethash"
-    CachesInMem = 2
-    CachesOnDisk = 3
-    DatasetDir = "/root/.ethash"
-    DatasetsInMem = 1
-    DatasetsOnDisk = 2
-    PowMode = 0
     
     [Eth.TxPool]
     Locals = []
@@ -447,7 +420,7 @@ spec:
     spec:
       containers:
       - name: miner01-container
-        image: ethereum/client-go:v1.10.26
+        image: ethereum/client-go:v1.13.14
         imagePullPolicy: Always
         command: [ "sh" ]
         args:
@@ -467,7 +440,8 @@ spec:
            --mine \
            --verbosity 3  \
            --unlock 0xc11ba4c7c24f70e7a581c7daa92eac108099acec --allow-insecure-unlock --password /etc/testnet/miner01/password.txt \
-           --config /etc/geth/miner01/gethconfig.toml;"
+           --config /etc/geth/miner01/gethconfig.toml \
+           --miner.etherbase 0xc11ba4c7c24f70e7a581c7daa92eac108099acec;"
         ports:
           - containerPort: 8545
           - containerPort: 8546
@@ -540,7 +514,7 @@ spec:
     spec:
       containers:
       - name: miner02-container
-        image: ethereum/client-go:v1.10.26
+        image: ethereum/client-go:v1.13.14
         imagePullPolicy: Always
         command: [ "sh" ]
         args:
@@ -560,7 +534,8 @@ spec:
            --mine \
            --verbosity 3  \
            --unlock 0x4c92786b90d848eaa3f4ef46918af724a309ae79 --allow-insecure-unlock --password /etc/testnet/miner02/password.txt \
-           --config /etc/geth/miner02/gethconfig.toml;"
+           --config /etc/geth/miner02/gethconfig.toml \
+           --miner.etherbase 0x4c92786b90d848eaa3f4ef46918af724a309ae79;"
         ports:
           - containerPort: 8545
           - containerPort: 8546
@@ -633,7 +608,7 @@ spec:
     spec:
       containers:
       - name: miner03-container
-        image: ethereum/client-go:v1.10.26
+        image: ethereum/client-go:v1.13.14
         imagePullPolicy: Always
         command: [ "sh" ]
         args:
@@ -653,7 +628,8 @@ spec:
            --mine \
            --verbosity 3  \
            --unlock 0x4e7afbdc9413eeb582b3f1be49d652fa714484da --allow-insecure-unlock --password /etc/testnet/miner03/password.txt \
-           --config /etc/geth/miner03/gethconfig.toml;"
+           --config /etc/geth/miner03/gethconfig.toml \
+           --miner.etherbase 0x4e7afbdc9413eeb582b3f1be49d652fa714484da;"
         ports:
           - containerPort: 8545
           - containerPort: 8546
